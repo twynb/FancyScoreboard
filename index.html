@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="author" content="twyn!b" />
+		<title>The Fancy Scoreboard</title>
+		<link
+			href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+			rel="stylesheet"
+			integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+			crossorigin="anonymous"
+		/>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+	</head>
+	<body>
+		<main>
+			<h1 class="text-center">The Fancy Scoreboard</h1>
+			<fieldset class="card mx-auto mt-4">
+				<div class="card-header">
+					<h2 class="card-title text-center">Scoreboard Bar Chart</h2>
+				</div>
+				<div class="card-body">
+					<div class="scoreboard-bar-chart-container">
+						<div id="bar_chart_header_row"></div>
+					</div>
+				</div>
+			</fieldset>
+			<fieldset class="card mx-auto mt-4">
+				<div class="card-header">
+					<h2 class="card-title text-center">Teams and Scores</h2>
+				</div>
+				<div class="card-body">
+					<div class="team-container">
+						<div class="row">
+							<b class="col-2">Team #</b>
+							<b class="col-4">Name</b>
+							<b class="col-4">Score</b>
+						</div>
+					</div>
+					<button id="btn_add_team" class="btn btn-success">
+						Add Team
+					</button>
+				</div>
+			</fieldset>
+		</main>
+
+		<!-- container for template elements -->
+		<div style="display: none">
+			<div id="template_team_row">
+				<div
+					class="form-group row mt-2 team-row"
+					id="team_row___ID__"
+					data-id="__ID__"
+				>
+					<div class="col-2">Team __ID__</div>
+					<div class="col-4">
+						<input
+							name="Team[__ID__][name]"
+							type="text"
+							class="form-control team-name-input"
+						/>
+					</div>
+					<div class="col-4">
+						<input
+							name="Team[__ID__][score]"
+							type="text"
+							class="form-control score-input"
+						/>
+					</div>
+					<div class="col-2">
+						<button
+							class="btn btn-danger btn-delete-team"
+							confirm="Are you sure you want to delete this team?"
+							data-id="__ID__"
+						>
+							Delete
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div id="template_scoreboard_row">
+				<div
+					class="scoreboard-flex-row mt-1"
+					id="scoreboard_row___ID__"
+				>
+					<div class="score" id="score___ID__">
+						<span class="team-name-display"></span>
+					</div>
+					<div
+						class="score-remaining"
+						id="score_remaining___ID__"
+					></div>
+				</div>
+			</div>
+
+			<div id="template_bar_chart_header_item">
+				<div style="flex-grow: 1">__VALUE__</div>
+			</div>
+		</div>
+	</body>
+
+	<script>
+		$(document).ready(() => {
+			// utility functions
+			const removeValueFromArray = (array, value) => {
+				const index = array.indexOf(value)
+				if (index > -1) {
+					array.splice(index, 1)
+				}
+			}
+
+			const numberOfDigits = (value) => {
+				// solution by Mwr247 on StackOverflow: https://stackoverflow.com/a/28203456
+				return Math.max(Math.floor(Math.log10(Math.abs(value))), 0) + 1
+			}
+
+			const roundUpToNearestFullNumberWithDigits = (value) => {
+				const digits = numberOfDigits(value)
+				const absValue = Math.abs(value)
+				const powerOfTen = Math.pow(10, digits - 1)
+				return absValue + powerOfTen - (absValue % powerOfTen)
+			}
+
+			const getRandomElementFromArray = (array) => {
+				return array[Math.floor(Math.random() * array.length)]
+			}
+
+            const stringIsPositiveInteger = (value) => {
+                let numValue = parseInt(value)
+                return !isNaN(value) && !isNaN(numValue) && numValue >= 0
+            }
+
+			// element constants
+			const teamContainer = $(".team-container")
+			const barChartContainer = $(".scoreboard-bar-chart-container")
+			const emptyTeamRow = $("#template_team_row").html()
+			const emptyBarChartRow = $("#template_scoreboard_row").html()
+			const barChartHeader = $("#bar_chart_header_row")
+			const emptyBarChartHeaderItem = $(
+				"#template_bar_chart_header_item"
+			).html()
+			const possibleColors = [
+				"coral",
+				"chocolate",
+				"cornflowerblue",
+				"darkorchid",
+				"deepskyblue",
+				"greenyellow",
+				"khaki",
+				"hotpink",
+				"indianred",
+				"lawngreen",
+				"lightseagreen",
+				"lightskyblue"
+			]
+
+			let nextTeamIndex = 0
+			let teams = []
+			let teamColors = {}
+
+			// team add/delete functions
+			const addTeam = () => {
+				teamContainer.append(
+					emptyTeamRow.replace(/__ID__/g, nextTeamIndex)
+				)
+				barChartContainer.append(
+					emptyBarChartRow.replace(/__ID__/g, nextTeamIndex)
+				)
+				teamColors[nextTeamIndex] =
+					getRandomElementFromArray(possibleColors)
+				$(`#score_${nextTeamIndex}`).css(
+					"background",
+					teamColors[nextTeamIndex]
+				)
+				teams.push(nextTeamIndex)
+				nextTeamIndex++
+				recalculateScores()
+			}
+
+			const deleteTeam = (e) => {
+				let id = parseInt($(e.target).attr("data-id"))
+				$(`#scoreboard_row_${id}`).remove()
+				$(e.target).closest(".team-row").remove()
+				removeValueFromArray(teams, id)
+				recalculateScores()
+			}
+
+			const changeTeamName = (e) => {
+				const teamRow = $(e.target).closest(".team-row")
+				changeTeamNameForTeamRow(teamRow)
+			}
+
+			const changeTeamNameForTeamRow = (teamRow) => {
+				const id = teamRow.attr("data-id")
+				const nameElem = teamRow.find(".team-name-input")
+				let newName = nameElem.val()
+				if (!newName) {
+					newName = `UNNAMED ${id}`
+				}
+				const score = getScoreForTeam(id)
+				$(`#score_${id}`)
+					.find(".team-name-display")
+					.text(`${newName}: ${score}`)
+			}
+
+			$("#btn_add_team").on("click", addTeam)
+
+			$(document).on("click", ".btn-delete-team", deleteTeam)
+
+			$(document).on("change", ".team-name-input", changeTeamName)
+
+			// scoreboard functions
+			const getScoreForTeam = (team) => {
+				let value = $(`input[name="Team[${team}][score]"]`).val()
+				return stringIsPositiveInteger(value) ? parseInt(value) : 0
+			}
+
+			const getAllScoresForTeams = () => {
+				return teams.map(getScoreForTeam)
+			}
+
+			const displayScore = (team, scoreboardLimit) => {
+				let score = getScoreForTeam(team)
+				let remaining = scoreboardLimit - score
+				$(`#score_${team}`).css("flex-grow", score)
+				$(`#score_remaining_${team}`).css("flex-grow", remaining)
+				changeTeamNameForTeamRow($(`#team_row_${team}`))
+			}
+
+			const adjustBarChartHeader = (scoreboardLimit) => {
+				const digits = numberOfDigits(scoreboardLimit)
+				const powerOfTen = Math.pow(10, digits - 1)
+                barChartHeader.empty()
+                for(let val = 0; val < scoreboardLimit; val+=powerOfTen / 2) {
+                    barChartHeader.append(emptyBarChartHeaderItem.replace(/__VALUE__/g, val))
+                }
+			}
+
+			const recalculateScores = (e) => {
+				const scores = getAllScoresForTeams()
+				const maxScore = Math.max(...scores)
+				const scoreboardLimit =
+					roundUpToNearestFullNumberWithDigits(maxScore)
+				for (team in teams) {
+					displayScore(team, scoreboardLimit)
+				}
+				adjustBarChartHeader(scoreboardLimit)
+			}
+
+			$(document).on("change", ".score-input", recalculateScores)
+		})
+	</script>
+
+	<style>
+		.card {
+			width: 60%;
+		}
+		.scoreboard-flex-row,
+		#bar_chart_header_row {
+			display: flex;
+			height: 40px;
+		}
+		.score .score-remaining {
+			height: 40px;
+		}
+		.score {
+			padding-left: 5px;
+			position: relative;
+            border-radius: 5px;
+            /* To center text inside */
+            display: flex;
+            flex-direction: column;
+            align-content: center;
+            justify-content: center;
+		}
+		.team-name-display {
+			position: absolute;
+			white-space: nowrap;
+		}
+	</style>
+</html>
