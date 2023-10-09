@@ -2,7 +2,9 @@
 
 This is pretty self explanatory - A simple Scoreboard that I hacked together in two hours, to use at events where you want a quick scoreboard display, but don't need to have the scores be stored somewhere.
 
-Simply add the teams you want and enter their names and scores to immediately see their score displayed as a bar chart. You can change everything in real time in case scores or teams change.
+To use the Fancy Scoreboard, simply open the scoreboard.html file in a browser of your choosing.
+
+Then add the teams you want and enter their names and scores to immediately see their score displayed as a bar chart. You can change everything in real time in case scores or teams change.
 
 Note that the scoreboard only allows to track positive scores, negative ones are interpreted as 0.
 
