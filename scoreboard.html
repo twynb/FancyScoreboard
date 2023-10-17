@@ -60,17 +60,46 @@
 							class="form-control team-name-input"
 						/>
 					</div>
-					<div class="col-4">
+					<div class="col-2">
 						<input
 							name="Team[__ID__][score]"
 							type="text"
 							class="form-control score-input"
 						/>
 					</div>
-					<div class="col-2">
+					<div class="col-3">
+						<button
+							class="btn btn-success btn-score-change"
+							data-change="-10"
+							data-id="__ID__"
+						>
+							-10
+						</button>
+						<button
+							class="btn btn-success btn-score-change"
+							data-change="-1"
+							data-id="__ID__"
+						>
+							-1
+						</button>
+						<button
+							class="btn btn-success btn-score-change"
+							data-change="1"
+							data-id="__ID__"
+						>
+							+1
+						</button>
+						<button
+							class="btn btn-success btn-score-change"
+							data-change="10"
+							data-id="__ID__"
+						>
+							+10
+						</button>
+					</div>
+					<div class="col-1">
 						<button
 							class="btn btn-danger btn-delete-team"
-							confirm="Are you sure you want to delete this team?"
 							data-id="__ID__"
 						>
 							Delete
@@ -126,10 +155,10 @@
 				return array[Math.floor(Math.random() * array.length)]
 			}
 
-            const stringIsPositiveInteger = (value) => {
-                let numValue = parseInt(value)
-                return !isNaN(value) && !isNaN(numValue) && numValue >= 0
-            }
+			const stringIsPositiveInteger = (value) => {
+				let numValue = parseInt(value)
+				return !isNaN(value) && !isNaN(numValue) && numValue >= 0
+			}
 
 			// element constants
 			const teamContainer = $(".team-container")
@@ -180,6 +209,9 @@
 
 			const deleteTeam = (e) => {
 				let id = parseInt($(e.target).attr("data-id"))
+				if (!confirm(`Are you sure you want to remove team ${id}?`)) {
+					return
+				}
 				$(`#scoreboard_row_${id}`).remove()
 				$(e.target).closest(".team-row").remove()
 				removeValueFromArray(teams, id)
@@ -231,10 +263,16 @@
 			const adjustBarChartHeader = (scoreboardLimit) => {
 				const digits = numberOfDigits(scoreboardLimit)
 				const powerOfTen = Math.pow(10, digits - 1)
-                barChartHeader.empty()
-                for(let val = 0; val < scoreboardLimit; val+=powerOfTen / 2) {
-                    barChartHeader.append(emptyBarChartHeaderItem.replace(/__VALUE__/g, val))
-                }
+				barChartHeader.empty()
+				for (
+					let val = 0;
+					val < scoreboardLimit;
+					val += powerOfTen / 2
+				) {
+					barChartHeader.append(
+						emptyBarChartHeaderItem.replace(/__VALUE__/g, val)
+					)
+				}
 			}
 
 			const recalculateScores = (e) => {
@@ -242,13 +280,26 @@
 				const maxScore = Math.max(...scores)
 				const scoreboardLimit =
 					roundUpToNearestFullNumberWithDigits(maxScore)
-				for (team in teams) {
+				for (const team of teams) {
 					displayScore(team, scoreboardLimit)
 				}
 				adjustBarChartHeader(scoreboardLimit)
 			}
 
+			const incrementScore = (e) => {
+				const target = $(e.target)
+				const id = parseInt(target.attr("data-id"))
+				const addition = parseInt(target.attr("data-change"))
+				const scoreField = $(`input[name="Team[${id}][score]"]`)
+				let value = scoreField.val()
+				value = stringIsPositiveInteger(value) ? parseInt(value) : 0
+				value += addition
+				scoreField.val(Math.max(value, 0))
+				recalculateScores()
+			}
+
 			$(document).on("change", ".score-input", recalculateScores)
+			$(document).on("click", ".btn-score-change", incrementScore)
 		})
 	</script>
 
@@ -267,16 +318,21 @@
 		.score {
 			padding-left: 5px;
 			position: relative;
-            border-radius: 5px;
-            /* To center text inside */
-            display: flex;
-            flex-direction: column;
-            align-content: center;
-            justify-content: center;
+			border-radius: 5px;
+			/* To center text inside */
+			display: flex;
+			flex-direction: column;
+			align-content: center;
+			justify-content: center;
 		}
 		.team-name-display {
 			position: absolute;
 			white-space: nowrap;
+		}
+
+		.btn-danger {
+			background-color: #990000;
+			border-color: #990000;
 		}
 	</style>
 </html>
